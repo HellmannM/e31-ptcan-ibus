@@ -1,4 +1,5 @@
-#include <chrono>
+#pragma once
+
 #include <cstddef>
 #include <cstdint>
 
@@ -26,9 +27,6 @@
 #define SERIAL_6O2 0x3A
 #define SERIAL_7O2 0x3C
 #define SERIAL_8O2 0x3E
-
-static const auto startTime = std::chrono::high_resolution_clock::now();
-uint32_t millis() { return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count(); }
 
 struct HardwareSerial
 {

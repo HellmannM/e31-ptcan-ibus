@@ -8,16 +8,18 @@
 
 //welcome message bei key in? dabei stromversorgung verlegen
 
-
+#include <stubs.h>
 
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(8, 2, 9, 4, 5, 6, 7);
 #include <IbusMessage.h>
 #include <IbusNames.h>
 #include <IbusTrx.h>
 #include <mcp_can.h>
 #include <SPI.h>
+
 #define CAN0_INT 48                              // Set INT to pin 48
+
+LiquidCrystal lcd(8, 2, 9, 4, 5, 6, 7);
 MCP_CAN CAN0(53);
 IbusTrx ibusTrx;
 
@@ -34,12 +36,12 @@ uint32_t ind_error_to_show = 1;
 const uint8_t Seitenanzahl = 7;
 
 //Menu
-String index;
+std::string index;
 
 //Ganganzeige
 
 int gear_data;
-String gear_digit="  ";
+std::string gear_digit="  ";
 
 //Errorlist variablen
 bool error_over_ibus = true;
@@ -97,8 +99,8 @@ const uint16_t interval_show_speed = 5001;
 
 
 
-String string_vol1;
-String string_vol2;
+std::string string_vol1;
+std::string string_vol2;
 
 float mpg1 = 0;
 float mpg2 = 0;
@@ -113,7 +115,7 @@ unsigned int readIndex = 0;
 
 int injection_volume = 0;
 int injection_volume_raw = 0;
-String oil2 = "---";
+std::string oil2 = "---";
 float oil1 = 0;
 unsigned int fuel = 0;
 unsigned int range_calc = 100;
@@ -208,8 +210,8 @@ struct Converter
 } conv;
 
 
-void text_to_ibus(String text_to_display, float data_to_display, String unit_to_display, int pos, bool floatsigns) {
-  String input = String(data_to_display, floatsigns);
+void text_to_ibus(std::string text_to_display, float data_to_display, std::string unit_to_display, int pos, bool floatsigns) {
+  std::string input = std::string(data_to_display, floatsigns);
   if (text_to_display.length() + pos + input.length() + unit_to_display.length() < 21) { //20 Ziffern können beschrieben werden
 
     for (int i = 0; i < text_to_display.length(); i++) {
@@ -236,7 +238,7 @@ void text_to_ibus(String text_to_display, float data_to_display, String unit_to_
   }
 }
 
-void string_to_ibus(String text_to_display, int pos) {
+void string_to_ibus(std::string text_to_display, int pos) {
   int a = text_to_display.length() + pos;
   if (a < 21) {
     for (int i = 4; i < text_to_display.length() + 4; i++) {
@@ -402,7 +404,7 @@ void loop() {
 
   if (extra_menu && (millis() - timer_extra_menu > interval_extra_menu)) {
     //Serial.println(page%Seitenanzahl);
-    index = String(abs(page % Seitenanzahl));
+    index = std::string(abs(page % Seitenanzahl));
     switch (abs(page % Seitenanzahl)) {
 
       case 1:
@@ -576,8 +578,8 @@ void loop() {
 
     // get fuel level from diagDataMessage
     if ((m.source() == 0x02) && (m.destination() == 0x01) && (m.b(1) == 0x85)) {
-      string_vol1 = String(m.b(3), HEX);
-      string_vol2 = String(m.b(2), HEX);
+      string_vol1 = std::string(m.b(3), HEX);
+      string_vol2 = std::string(m.b(2), HEX);
       fuel = (string_vol1.toInt()) * 100 + string_vol2.toInt();
     }
 

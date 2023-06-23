@@ -15,6 +15,10 @@ debug: all
 werror: CXXFLAGS += -Werror
 werror: debug
 
+.PHONY: fatal
+fatal: CXXFLAGS += -Wfatal-errors
+fatal: all
+
 relay: relay.o IbusMessage.o IbusTrx.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(MOREFLAGS) $^ -o $@
 
