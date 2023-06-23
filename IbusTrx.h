@@ -10,7 +10,8 @@
 #ifndef IbusTrx_h
 #define IbusTrx_h
 
-//#include "Arduino.h"
+#include <HardwareSerial.h>
+
 #include "types.h"
 #include "IbusMessage.h"
 #include "IbusNames.h"
