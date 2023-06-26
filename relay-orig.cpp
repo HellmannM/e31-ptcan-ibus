@@ -10,7 +10,6 @@
 
 #include <stubs.h>
 
-#include <float_hex_converter.h>
 #include <LiquidCrystal.h>
 #include <IbusMessage.h>
 #include <IbusNames.h>
@@ -19,6 +18,10 @@
 #include <SPI.h>
 
 #define CAN0_INT 48                              // Set INT to pin 48
+
+LiquidCrystal lcd(8, 2, 9, 4, 5, 6, 7);
+MCP_CAN CAN0(53);
+IbusTrx ibusTrx;
 
 //#define button_in  A0    // Eingang des Hebels zum Umschalten des Menu A8 für im Auto und A0 debug
 #define button_in  A8
@@ -135,12 +138,76 @@ bool error_menu = false;
 bool veh_in_front = false;
 
 
+// CAN Data; Message for clear DTC
+int clearDTC_id       = 0x6F1;
+byte clearDTC_data[8]  = {0x12, 0x03, 0x14, 0xFF, 0xFF, 0x00,0x00,0x00};
+const int  clearDTC_length   = 8;
+
+int clearDSC_id       = 0x6F1;
+byte clearDSC_data[8]  = {0x29, 0x03, 0x14, 0xFF, 0xFF, 0x00,0x00,0x00};
+const int  clearDSC_length   = 8;
+
+
+// CAN Data; Message for MPG reset
+int reset_mpg_id       = 0x2B8;
+byte reset_mpg_data[6]  = {0x31, 0x00, 0xF0, 0x00, 0x00, 0xE3};
+const int  reset_mpg_length   = 6;
+
+
+// iBus Messages
+uint8_t send_inspectionlights_off[8] = {0x02, 0x07, 0x01, 0xC0, 0x00, 0x00, 0x0B, 0x06};
+uint8_t send_inspectionlights_show_orange[8] = {0x02, 0x07, 0x01, 0xC0, 0x10, 0x00, 0x0B, 0x06};
+uint8_t send_inspectionlights_show[8] =        {0x02, 0x07, 0x01, 0xC0, 0x00, 0x00, 0x0B, 0x06};
+//uint8_t send_inspectionlights_show_one_green[8] = {0x02, 0x07, 0x01, 0xC0, 0x01, 0x00, 0x0B, 0x06};
+//uint8_t send_inspectionlights_show_two_green[8] = {0x02, 0x07, 0x01, 0xC0, 0x03, 0x00, 0x0B, 0x06};
+//uint8_t send_inspectionlights_show_three_green[8] = {0x02, 0x07, 0x01, 0xC0, 0x07, 0x00, 0x0B, 0x06};
+//uint8_t send_inspectionlights_show_four_green[8] = {0x02, 0x07, 0x01, 0xC0, 0x0F, 0x00, 0x0B, 0x06};
+//Stelle Byte4 entscheidetüber Lampe:
+//00= alles aus
+//01=erste;02=zweite;04=dritte;08=vierte;10=fünfe;20=orange;40;
+//Byyte5=xx
+//xx = 01 Anzeige Ölservice zusätzlich ein
+//xx = 04 Anzeige Inspection zusätzlich ein
+//xx = 08 Anzeige Uhrsymbol zusätzlich ein
+//xx = 00 Anzeige Ölservice, Inspection, Uhrsymbol aus
+
+uint8_t send_welcome[24] = {0x02, 0x21, 0x01, 0xE0, 0x20, 0x20, 0x20, 0x20, 0x41, 0x64, 0x12, 0x69, 0x61, 0x6E, 0x13, 0x20, 0x20, 0x20, 0x38, 0x33, 0x35, 0x64, 0x20, 0x20};
+
+uint8_t text_iBus[24] = {0x02, 0x21, 0x01, 0xE0, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20};
+uint8_t send_checkcontrol[5] = {0x02, 0x04, 0x01, 0xC8, 0xFF};
+uint8_t send_clearscreen[5] = {0x02, 0x04, 0x01, 0xC8, 0x00};
+uint8_t send_oil_low[6] = {0x02, 0x05, 0x01, 0xC8, 0x61, 0x08}; //182,27,28
+//send oil low 02 05 01 C8 61 08 A7
+//Clear send oil low 02 05 01 C8 00 02 CS
+
+uint8_t send_flattyre[5] = {0x02, 0x04, 0x01, 0xC8, 0x03}; //336,63,142,147,265
+uint8_t send_rdc_error[5] = {0x02, 0x04, 0x01, 0xC8, 0x34}; //149,144,145,
+
+
+uint8_t send_range[6]  = {0x02, 0x05, 0x01, 0x96, 0xFF, 0xFF};
+uint8_t send_verbr1[6] = {0x02, 0x05, 0x01, 0x92, 0x11, 0x11};
+uint8_t send_verbr2[6] = {0x02, 0x05, 0x01, 0x93, 0x11, 0x12};
+uint8_t request_diagnose[5]  = {0x01, 0x04, 0x02, 0xFE, 0x01};
+uint8_t request_fuellevel[5] = {0x01, 0x04, 0x02, 0xFE, 0x85};
 
 
 
 
-
-
+struct Converter
+{
+  unsigned char chars[2];
+  void float_to_fake_hex(float finput) {
+    int input = (int)(finput * 1.f);
+    chars[1] =     (input       ) % 10
+                   + (((input / 10  ) % 10) * 16);
+    chars[0] =     (input / 100 ) % 10
+                   + (((input / 1000) % 10) * 16);
+  }
+  float fake_hex_to_float(unsigned char* c) {
+    return ((float)((((c[0] / 16) % 10) * 10) + (c[0] % 16)) * 10.f)
+           + ((float)((((c[1] / 16) % 10) * 10) + (c[1] % 16)) / 10.f);
+  }
+} conv;
 
 
 void text_to_ibus(std::string text_to_display, float data_to_display, std::string unit_to_display, int pos, bool floatsigns) {
@@ -194,11 +261,6 @@ void string_to_ibus(std::string text_to_display, int pos) {
 
 
 /// SETUP
-static LiquidCrystal    lcd(8, 2, 9, 4, 5, 6, 7);
-static MCP_CAN          CAN0(53);
-static IbusTrx          ibusTrx;
-static menu             main_menu(ibusTrx);
-static float_to_hex_converter conv;
 
 void setup() {
   lcd.begin(16, 2);
@@ -230,7 +292,187 @@ void loop() {
     ibusTrx.available();
   };
 
-  main_menu.update();
+  //Welcome Message
+  if ((millis() < 5000)&&!extra_menu) {
+    if (millis() - timer_welcome < 200) {
+      ibusTrx.write(send_welcome);
+    }
+    timer_welcome = millis();
+  }
+
+
+  //Debug LCD Terminal
+  if (millis() - timer_print_lcd > 200) {
+    lcd.setCursor(0, 0);
+    lcd.print(e31KEY_data, HEX);
+    lcd.print("Z");
+    lcd.print(e31ZKE_data[0], HEX);
+    lcd.print(" ");
+    lcd.print(e31ZKE_data[1], HEX);
+    lcd.print(" ");
+    lcd.print("L");
+    lcd.print(e31LKM_data[3], HEX);
+    lcd.print(" ");
+    lcd.print(mpg2);
+    lcd.setCursor(0, 1);
+    lcd.print(fuel);
+    lcd.print(" ");
+    lcd.print(mpg1);
+    lcd.print(" ");
+    lcd.print(range_calc);
+    lcd.print("k ");
+    lcd.print(ign_watchdog, HEX);
+    lcd.print(" ");
+    timer_print_lcd = millis();
+  }
+
+
+  //Clear screen nach automatikmodus
+  if (clear_screen && (millis() - timer_clear_screen > 60)) {
+    if (clear_counter > 4) {
+
+      ibusTrx.write(send_inspectionlights_off);
+      ibusTrx.available();
+      ibusTrx.available();
+      ibusTrx.available();
+      ibusTrx.write(send_clearscreen);
+      ibusTrx.available();
+      ibusTrx.available();
+      clear_counter = 0;
+      clear_screen = false;
+    } else {
+      ibusTrx.available();
+      ibusTrx.write(send_checkcontrol);
+      ibusTrx.available();
+      clear_counter++;
+    }
+    timer_clear_screen = millis();
+  }
+
+
+//  diese Funktion löscht die Tempomatanzeige wenn der Timer_ACC_Set abgelaufen ist. Im Automatikmodus (nicht im Extramenu wird der Timer nur einmal gesetzt)
+    if (!show_dist&&!acc_on&&(millis() - timer_acc_set > interval_show_speed)) {
+      if (acc_set_speed_change) {
+        extra_menu = false;
+        clear_screen = true;
+      }
+      acc_set_speed_change = false;
+    }
+
+  //send data to ibus from errorlist(CAN input) RDC+OIL (wobei öl muss ich dann rausnehmen
+  if (error_over_ibus) {
+    if (millis() - timer_lookforerror_to_ibus > 5000) {
+
+      //uint8_t send_oil_low[5]={0x02,0x04,0x01,0xC8,0x61}; //182,27,28
+      //uint8_t send_flattyre[5]={0x02,0x04,0x01,0xC8,0x03}; //336,63,142,147,265
+      //uint8_t send_rdc_error[5]={0x02,0x04,0x01,0xC8,0x34}; //149,144,145,50,73
+
+      //    if (errorlist[182] || errorlist[27] || errorlist[28]) {
+      //      ibusTrx.write(send_oil_low);
+      //      ibusTrx.available();
+      //    }
+      if (errorlist[336] || errorlist[63] || errorlist[142] || errorlist[147] || errorlist[265]) {
+        ibusTrx.write(send_flattyre);
+      }
+      if (errorlist[149] || errorlist[144] || errorlist[145] || errorlist[50] || errorlist[73]) {
+        ibusTrx.write(send_rdc_error);
+      }
+      timer_lookforerror_to_ibus = millis();
+    }
+  }
+
+
+  //Send iBus messages verbr1 verbr2 und range
+  if (millis() - timer_send_verbr2 > interval_send_verbr2) {
+    ibusTrx.write(send_verbr2);
+    timer_send_verbr2 = millis();
+  }
+
+
+  //Send iBus messages verbr1 verbr2 und range
+  if (millis() - timer_send_verbr1 > interval_send_verbr1) {
+    ibusTrx.write(send_verbr1);
+    timer_send_verbr1 = millis();
+  }
+
+  if (millis() - timer_send_range > interval_send_range) {
+    ibusTrx.write(send_range);
+    timer_send_range = millis();
+  }
+
+
+
+  if (extra_menu && (millis() - timer_extra_menu > interval_extra_menu)) {
+    //Serial.println(page%Seitenanzahl);
+    index = std::string(abs(page % Seitenanzahl));
+    switch (abs(page % Seitenanzahl)) {
+
+      case 1:
+        // Speed Cruise control
+        string_to_ibus(index, 0);
+        text_to_ibus(" ACC: ", speed_set, "km/h", 1, 0);
+        text_to_ibus(" ", acc_on, "", 14, 0);
+        text_to_ibus("B", brake_status, "", 15, 0);
+        text_to_ibus("_", dist, "", 17, 0);
+        //text_to_ibus("> ", speed_ist, 4, 1);
+        break;
+
+      case 2:
+        // Battery Voltage Watertemp and Oiltemp
+        string_to_ibus(index, 0);
+        text_to_ibus(" BAT:", battery_voltage, "V ", 1, 1);
+        text_to_ibus("WT:", water_temp, "'C", 12, 0);
+        break;
+
+      case 3:
+        //Oil level
+        string_to_ibus(index, 0);
+        string_to_ibus(" OIL", 1);
+        string_to_ibus(oil2, 5);
+        text_to_ibus(" ", oil1, "% ", 9, 0);
+        text_to_ibus("", oil_temp, "'", 15, 0);
+        break;
+      case 4:
+        //tank level
+        string_to_ibus(index, 0);
+        text_to_ibus(" T:", (float)fuel / 10, "l", 1, 1);
+        text_to_ibus("RW:", range_calc, "km", 11, 0);
+        break;
+
+      case 5:  // iBus Data
+        string_to_ibus(index, 0);
+        string_to_ibus(" ", 1);
+        string_to_ibus(gear_digit, 2);
+        //text_to_ibus("k:", e31KEY_data, " ", 8, 0);
+        //text_to_ibus(" ", e31LKM_data[0], "", 11, 0);
+        //text_to_ibus(" ", e31LKM_data[1], "", 15, 0);
+        text_to_ibus("inj:",  injection_volume , "", 6, 0);
+        break;
+
+        case 6:  // iBus Data
+        string_to_ibus(index, 0);
+        string_to_ibus(" ", 1);
+        text_to_ibus("FreeMem",  freeMemory() , "",3, 0);
+        break;
+
+
+      case 0:  //Lenkwinkel
+
+        string_to_ibus(index, 0);
+        text_to_ibus(" ", lw, "'", 1, 1);
+        text_to_ibus("MPG:", mpg2_ind,"", 7, 1);
+        text_to_ibus("", injection_volume,"", 12, 1);
+        break;
+    }
+    ibusTrx.write(text_iBus);
+
+    //Abstandzeige
+
+
+
+    timer_extra_menu = millis();
+  }
+
 
   if ((millis() > 20000) && (millis() - timer_dist_menu > 251)) {
     if (extra_menu || show_dist) {
