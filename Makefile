@@ -1,11 +1,11 @@
 CXX := g++
 CXXFLAGS := -std=c++17 -O2
-LDFLAGS := -ltbb
+#LDFLAGS := -ltbb
 MOREFLAGS := -fdiagnostics-color=always
 INCLUDES := -I. -I./stubs
 
 .PHONY: all
-all: relay
+all: relay-box.o
 
 .PHONY: debug
 debug: CXXFLAGS += -Wall -Wpedantic -Wextra -Wno-unused-parameter -Wno-unused-but-set-variable -g -O0
@@ -30,6 +30,12 @@ IbusMessage.o: IbusMessage.h IbusMessage.cpp types.h
 
 IbusTrx.o: IbusTrx.h IbusTrx.cpp IbusNames.h types.h
 	$(CXX) $(CXXFLAGS) $(MOREFLAGS) $(INCLUDES) -c IbusTrx.cpp -o $@
+
+#relay-box: relay-box.o
+#	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(MOREFLAGS) $^ -o $@
+
+relay-box.o: relay-box.cpp
+	$(CXX) $(CXXFLAGS) $(MOREFLAGS) $(INCLUDES) -c relay-box.cpp -o $@
 
 .PHONY: clean
 clean:
