@@ -10,7 +10,7 @@
 
 #include <stubs.h>
 
-#include <float_hex_converter.h>
+#include <hex_float_converter.h>
 #include <LiquidCrystal.h>
 #include <IbusMessage.h>
 #include <IbusNames.h>
@@ -31,9 +31,6 @@ int32_t page = 1;
 int error_page = 0;
 uint32_t ind_error_to_show = 1;
 const uint8_t Seitenanzahl = 7;
-
-//Menu
-std::string index;
 
 //Ganganzeige
 
