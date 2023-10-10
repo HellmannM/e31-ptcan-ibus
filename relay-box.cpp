@@ -31,6 +31,8 @@
 #include <mcp_can.h>
 #include <SPI.h>
 
+#include <errorcodes.h>
+
 #define CAN0_INT 2                              // Set INT to pin 2
 MCP_CAN CAN0(10);                               // Set CS to pin 10
 
@@ -47,14 +49,11 @@ unsigned long ACC_brake_timer = 0;
 bool Brake_lights_on = false;
 bool Fussbremse_getreten = false;
 
-int init_time = 500; //initialisierungszeit 10ms brauche ich nicht mehr, kann irgendwann rausgenommen werden, dann bei initialisierung alles auf HIGH setzen.
+unsigned int init_time = 500; //initialisierungszeit 10ms brauche ich nicht mehr, kann irgendwann rausgenommen werden, dann bei initialisierung alles auf HIGH setzen.
 const int IGN_pin = A5 ; //S_Line muss an pin D3 Digital 3, und IGN an Pin 19 (Analog5) kommt IGN
 bool RPM_init=true;
 
 //Motorparams
-bool Error_on_off = false;
-uint16_t      Error_ID = 0;
-
 const int EML_pin = 7;  // Pin 7
 bool    EML = false;     // Angeschlossen
 
@@ -111,221 +110,6 @@ unsigned long rxId;
 unsigned char len = 0;
 byte rxBuf[8];
 char msgString[128];                        // Array to store serial string
-bool errorlist[400] = {0};
-
-
-const int CEL_liste[] = {25, 31, 34, 282, 283};
-
-const int EML_liste[] = {27, 28, 29, 30, 33, 39, 49, 28, 148, 182, 212, 257}; // OILLEVEL
-//DDE 29  1   GELB  Problem mit Motor, Leistung reduziert
-//DDE 30  1   ROT Sofort anhalten.MOTOR STOP. Motor defekt
-//DDE 31  1 MIL GELB  Abgasproblem
-//DDE 32  0   GELB  Tankdeckel ist offen
-//DDE 33  1   GELB  Problem mit abgastemperatur
-//DDE 34  1 MIL - Allgemeine MIL Lampe
-//DDE 39  1   ROT Übertemperatur
-//DDE 49  1   GELB  Partikelfilter defekt
-//DDE 148 1   GELB  Bremslichtcheck defekt
-//DDE 212 1   ROT Öldruck zu niedrig
-
-//DDE 257 1   GELB  Motor zu heiß (steht aber unter Batterie.. sehr komisch..
-
-
-const int OIL_liste[] = {27, 28, 182};
-//DDE 27  1   GELB  Öl ist auf minimum
-//DDE 28  1   GELB  Öl ist UNTER minimum
-//DDE 182 1   GELB  Öllevelsensor defekt
-
-const int GET_liste[] = {105, 171, 172, 248, 254, 287, 288, 289, 290, 292, 307, 322, 323, 325, 268};
-//EGS  105 1   ROT Getriebe überhitzt
-//EGS 171 1   GELB  Getriebe fehler
-//EGS 172 1   ROT Getriebe fehler
-//EGS 178 0   GELB  Getriebe in N. Wagen kann wegrollen
-//EGS 248 1   GELB  Problem zwischen ABS und EGS
-//EGS 254 1   ROT Getriebe fehler
-//EGS 287 1   GELB  Getriebe überhitzt
-//EGS 288 1   GELB  Getriebe fehler
-//EGS 289 1   ROT Getriebe fehler
-//EGS 290 1   ROT Getriebe fehler
-//EGS 291 1   GELB  Getriebe fehler
-//EGS 292 1   ROT Getriebe schaltet in N
-//EGS 293 0 keine LED GELB  N oder P einlegen und Bremse treten für Motorstart
-//EGS 302 0   GELB  Getriebe nicht in P. Wagen kann wegrollen
-//EGS 307 1   ROT Getriebe fehler
-//EGS 322 1   ROT Getriebe lernt
-//EGS 323 1   ROT Getriebe lernt
-//EGS 325 0   GELB  Getriebe in N
-//EGS 368 1   GELB  Getriebe fehler
-
-
-const int RPA_liste[] = {50, 63, 336}; //RPA
-//DSC 50  1   RPA FEHLER
-//DSC 63  1   ROT RPA Reifen hat Loch
-//DSC 336 1   RPA   RPA fehler
-
-
-const int BRAKEWARN_liste[] = { 1, 2, 3, 26, 59, 69, 85, 176, 337, 338, 339, 341, 342, 282, 283}; //TEMP
-//abstand 282 Auto GELB
-//abstand 283 Auto ROT
-
-
-//DDE 26  1   GELB  Cruise_Control_Error
-
-//LDM 1 1   GELB  ACC nicht verfügbar, weil glatt
-//LDM 2 1   GELB  ACC nicht verfügbar, Sensor blockiert
-//LDM 3 1   GELB  ACC fehler
-//LDM 59  1   GELB  ACC nicht verfügbar, Handbremse angezogen
-//LDM 69  1   GELB  nicht verfügbar unter 30kmh
-//LDM 85  1   GELB  ACC zu starkes bremsen
-//LDM 176 1   GELB  ACC nicht verfügbar, Sensor blockiert
-//LDM 276 0   GELB  Hochschalten
-//LDM 277 0   GELB  Hochschalten
-//LDM 277 0   GELB  Falscher Gang
-//LDM 278 0   GELB  Runterschalten
-//LDM 337 1   GELB  Tempomat fehler
-//LDM 338 1   GELB  Tempomat deaktiv, Handbremse  //hier steht zwei mal 338
-//LDM 339 1   GELB  DCC zu starkes bremsen
-//LDM 341 1   GELB  Falscher Gang
-//LDM 342 1   GELB  nicht verfügbar unter 30kmh
-
-
-
-const int ABS_liste[] = {71, 74, 236, 42, 36, 353, 236};
-
-//DSC 71  Hilldecent control deaktiv_nicht angeschlossen, aber wenn Fehler, dann funktionier t vieles nicht
-//ABS ROT Bremsbeläge verschlissen
-//DSC 74  nicht angeschlossen, aber wenn Fehler, dann funktionier t vieles nicht  ABS ROT Bremsflüssigkeitsstand niedrig
-//DSC 236 1 ABS GELB  ABS fehler
-//DSC 353 1 ABS GELB  Bremsen überhitzt
-//DSC 42  1 ABS GELB  EBV/CBC Fehler?
-//DSC 184 1 DSC GELB  DTC aktiv, DSC reduziert
-//DSC 36  1 DSC GELB  DSC deaktiviert
-
-const int DSC_liste[] = {24, 35, 36 , 184, 215, 237, 353, 334, 354, 283};
-//283 ist ROT Auto Warnung
-//DSC  24  1 ABS GELB  DBC defekt??
-//DSC 35  1 DSC GELB  DSC defekt
-//DSC 36  1 DSC GELB  DSC deaktiviert
-//DSC 184 1 DSC GELB  DTC aktiv, DSC reduziert
-//DSC 215 1 DSC - Allgemeiner DTC Meldung
-//DSC 237 1 DSC GELB  DSC fehler
-//DSC 330 0   GELB  HDC HilldescendControl not available
-//DSC 331 0   GELB  HDC aktiv
-//DSC 332 0   GELB  HDC deaktiv
-//DSC 333 0   GELB  HDC icht  verfügbar
-//DSC 334 1   Orange  Standarddize RPA ??????????????????????? Fehler nummer73
-//DSC 352 0   GELB  Bremsen zu heiß
-//DSC 354 1 ABS GELB  Anfahrhilfe deaktiviert
-
-//const int VORG_liste[] = {25};
-//25 vorglühen
-//DDE 25  1   GELB  Vorglühen   // hier muss eine andere Lampe nehmen!
-
-
-const int BAT_liste[] = {213, 220, 229, 247, 304, 305, 306};
-//DDE 213 1   ROT Batterie nicht geladen
-//DDE 220 1   GELB  Batterie Entladung zu hoch
-//DDE 229 1   GELB  Batterespannung niedrig
-//DDE 247 1   GELB  Batteriemonitoring nicht möglich
-//DDE 304 0   GELB  Batterie check, zu alt
-//DDE 305 1   GELB  Batterieanschlüsse locker
-//DDE 306 1   GELB  Batterie entladen
-
-// ZUSÄTZLICH
-
-
-//05A9  8 40  EC  0 15  FF  FF  FF  FF  --> 236 ABS ERROR
-//05A9  8 40  32  0 21  FF  FF  FF  FF  --> 50 Tire failure warning
-//05A9  8 40  18  0 19  FF  FF  FF  FF  --> 24 DSC Error
-//05A9  8 40  62  1 21  FF  FF  FF  FF  --> 98
-
-
-
-bool is_true(const int input_array[], int laenge) {
-  bool error_found = false;
-
-  //Errorliste hat maximal 399 einträge...
-  if (laenge > 398) {
-    laenge = 398;
-  }
-
-
-  for (int ii = 0; ii < laenge; ii++ ) {
-
-
-    if (errorlist[input_array[ii]] == true) {
-      error_found = true;
-      break;
-    }
-
-  }
-
-  return error_found;
-}
-
-
-void lookfornewerrors() {
-
-
-  if (is_true(EML_liste, sizeof(EML_liste) / sizeof(EML_liste[0]))) { //34 MIL; 212 OILPRESSURE LOW
-    EML = true;
-  } else {
-    EML = false;
-  }
-
-  if (is_true(CEL_liste, sizeof(CEL_liste) / sizeof(CEL_liste[0]))) { //CEL
-    CEL = true;
-  } else {
-    CEL = false;
-  }
-
-
-  if (is_true(OIL_liste, sizeof(OIL_liste) / sizeof(OIL_liste[0]))) {
-    OIL = true;
-  } else {
-    OIL = false;
-  }
-
-
-  if (is_true(BAT_liste, sizeof(BAT_liste) / sizeof(BAT_liste[0]))) {
-    BAT = true;
-  } else {
-    BAT = false;
-  }
-
-  if (is_true(DSC_liste, sizeof(DSC_liste) / sizeof(DSC_liste[0]))) {
-    DSC = true;
-  } else {
-    DSC = false;
-  }
-
-  if (is_true(ABS_liste, sizeof(ABS_liste) / sizeof(ABS_liste[0]))) {
-    ABS = true;
-  } else {
-    ABS = false;
-  }
-
-  if (is_true(BRAKEWARN_liste, sizeof(BRAKEWARN_liste) / sizeof(BRAKEWARN_liste[0]))) {
-    BRAKEWARN = true;
-    GONG = true;
-  } else {
-    BRAKEWARN = false;
-    GONG = false;
-  }
-
-  if (is_true(RPA_liste, sizeof(RPA_liste) / sizeof(RPA_liste[0]))) {
-    RPA = true;
-  } else {
-    RPA = false;
-  }
-  if (is_true(GET_liste, sizeof(GET_liste) / sizeof(GET_liste[0]))) {
-    GET = true;
-  } else {
-    GET = false;
-  }
-
-}
-
 
 void setup()
 {
@@ -357,9 +141,10 @@ void setup()
   pinMode(KLIMA_off_pin, OUTPUT);
   digitalWrite(KLIMA_off_pin, LOW);
 
-
   CEL_init = true;
 }
+
+error_state state;
 
 void loop() {
 
@@ -367,7 +152,7 @@ void loop() {
     IGN = true;
     if (CEL_init && ((millis() - timer_CEL_init) > 10000)) {
       CEL = false;
-      errorlist[34] = 0;
+      state.update(34, false);
       CEL_init = false;
       Serial.print("EML errorlist[34] RESET");
     }
@@ -375,7 +160,7 @@ void loop() {
     IGN = false;
     CEL_init = true;
     RPM_init = true;
-    memset(errorlist, 0, sizeof(errorlist));
+    state.reset();
   }
 
 
@@ -420,7 +205,7 @@ void loop() {
 
 
     if (rxId == 0xAA) {
-      accel_pos = float((uint16_t(rxBuf[3]) << 8) + rxBuf[2]) / 655.35;
+      accel_pos = float((uint16_t(rxBuf[3]) << 8) + rxBuf[2]) / 655.35f;
       RPM = (uint16_t(rxBuf[5] << 8) + rxBuf[4]) / 4;
       if (RPM_init && (RPM > 400)) {
         Serial.println();
@@ -550,15 +335,15 @@ void loop() {
       //0x40 sind Fehlermeldungen die im KMB gezeigt werden
       if (rxBuf[0] == 0x40) {
         //Error ist byte1 +erstes bit von byte2
-        Error_ID = rxBuf[1] + uint16_t(bitRead(rxBuf[2], 0) << 8);
+        const uint16_t Error_ID = rxBuf[1] + uint16_t(bitRead(rxBuf[2], 0) << 8);
         //Fehler an oder aus steht in Byte3
-        Error_on_off = (bitRead(rxBuf[3], 0));
+        const bool Error_on_off = (bitRead(rxBuf[3], 0));
 
         if (Error_ID > 0 && Error_ID < 399) {
-          errorlist[Error_ID] = Error_on_off;
+          state.update(Error_ID, Error_on_off);
         }
 
-        lookfornewerrors();
+        state.check_groups();
 
         if (1) {
           Serial.print(" Error Warning ID: ");
@@ -571,10 +356,12 @@ void loop() {
         }
         if (0) {
           Serial.print("Errorlist: ");
-          for (int kk = 0; kk < sizeof(errorlist) / sizeof(errorlist[0]); kk++) {
-            if (errorlist[kk] == 1) {
-              Serial.print(kk);
-              Serial.print(", ");
+          for (size_t i=0; i<sizeof(state.state_array); ++i)
+          {
+            if (state.state_array[i])
+            {
+                Serial.print(i);
+                Serial.print(", ");
             }
           }
           Serial.println();
