@@ -113,407 +113,407 @@ char msgString[128];                        // Array to store serial string
 
 void setup()
 {
-  while (CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) != CAN_OK) {}
-  CAN0.setMode(MCP_LISTENONLY);   // Change to normal mode to allow messages to be transmitted
+    while (CAN0.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) != CAN_OK) {}
+    CAN0.setMode(MCP_LISTENONLY);   // Change to normal mode to allow messages to be transmitted
 
-  Serial.begin(115200);
-  Serial3.begin(9600);
-  Serial.println("Reboot - CAN OK");
+    Serial.begin(115200);
+    Serial3.begin(9600);
+    Serial.println("Reboot - CAN OK");
 
-  pinMode(CEL_pin, OUTPUT);
-  digitalWrite(CEL_pin, LOW);
-  pinMode(EML_pin, OUTPUT);
-  digitalWrite(EML_pin, LOW);
-  pinMode(BAT_pin, OUTPUT);
-  digitalWrite(BAT_pin, LOW);
-  pinMode(DSC_pin, OUTPUT);
-  digitalWrite(DSC_pin, LOW);
-  pinMode(ABS_pin, OUTPUT);
-  digitalWrite(ABS_pin, LOW);
-  pinMode(OIL_pin, OUTPUT);
-  digitalWrite(OIL_pin, LOW);
-  pinMode(BRAKEWARN_pin, OUTPUT);
-  digitalWrite(BRAKEWARN_pin, HIGH);  //Invertiert
-  pinMode(ACC_brake_pin, OUTPUT);
-  digitalWrite(ACC_brake_pin, LOW);
-  pinMode(GONG_pin, OUTPUT);
-  digitalWrite(GONG_pin, LOW);
-  pinMode(KLIMA_off_pin, OUTPUT);
-  digitalWrite(KLIMA_off_pin, LOW);
+    pinMode(CEL_pin, OUTPUT);
+    digitalWrite(CEL_pin, LOW);
+    pinMode(EML_pin, OUTPUT);
+    digitalWrite(EML_pin, LOW);
+    pinMode(BAT_pin, OUTPUT);
+    digitalWrite(BAT_pin, LOW);
+    pinMode(DSC_pin, OUTPUT);
+    digitalWrite(DSC_pin, LOW);
+    pinMode(ABS_pin, OUTPUT);
+    digitalWrite(ABS_pin, LOW);
+    pinMode(OIL_pin, OUTPUT);
+    digitalWrite(OIL_pin, LOW);
+    pinMode(BRAKEWARN_pin, OUTPUT);
+    digitalWrite(BRAKEWARN_pin, HIGH);  //Invertiert
+    pinMode(ACC_brake_pin, OUTPUT);
+    digitalWrite(ACC_brake_pin, LOW);
+    pinMode(GONG_pin, OUTPUT);
+    digitalWrite(GONG_pin, LOW);
+    pinMode(KLIMA_off_pin, OUTPUT);
+    digitalWrite(KLIMA_off_pin, LOW);
 
-  CEL_init = true;
+    CEL_init = true;
 }
 
 error_state state;
 
 void loop() {
 
-  if (analogRead(IGN_pin) > 400) {  //512 ??
-    IGN = true;
-    if (CEL_init && ((millis() - timer_CEL_init) > 10000)) {
-      CEL = false;
-      state.update(34, false);
-      CEL_init = false;
-      Serial.print("EML errorlist[34] RESET");
-    }
-  } else {
-    IGN = false;
-    CEL_init = true;
-    RPM_init = true;
-    state.reset();
-  }
-
-
-
-
-
-  klima_raw = (klima_raw * (iii - 1) + analogRead(KLIMA_TASTE_EIN_pin)) / iii;
-  if (iii > 100) {
-    iii = 1;
-  };
-  iii = iii + 1;
-
-  if (klima_raw > 50) {
-    if (accel_pos > 70) {
-      KLIMA_off = true;
+    if (analogRead(IGN_pin) > 400) {  //512 ??
+        IGN = true;
+        if (CEL_init && ((millis() - timer_CEL_init) > 10000)) {
+            CEL = false;
+            state.update(34, false);
+            CEL_init = false;
+            Serial.print("EML errorlist[34] RESET");
+        }
     } else {
-      KLIMA_off = false;
-    }
-  } else {
-    KLIMA_off = true;
-  }
-  if (0) {
-    Serial.print(KLIMA_off);
-    Serial.print("  ");
-    Serial.print(klima_raw);
-    Serial.print(" ");
-    Serial.println(analogRead(KLIMA_TASTE_EIN_pin));
-    ;
-  }
-  if (!Fussbremse_getreten && ACC_brake && ((millis() - ACC_brake_timer) > 750)) {  //Wenn CAN message Bremse AN und diese länger als 750ms an ist, dann setzte Bremslichter ein
-    Brake_lights_on = true;
-  } else {
-    Brake_lights_on = false;
-  }
-
-
-  // RECEIVE DATA /////////////////////////////////////////////////////////////////////******************************
-  //read new can message
-  if (!digitalRead(CAN0_INT)) {                       // If CAN0_INT pin is low, read receive buffer
-
-    CAN0.readMsgBuf(&rxId, &len, rxBuf);      // Read data: len = data length, buf = data byte(s)
-
-
-    if (rxId == 0xAA) {
-      accel_pos = float((uint16_t(rxBuf[3]) << 8) + rxBuf[2]) / 655.35f;
-      RPM = (uint16_t(rxBuf[5] << 8) + rxBuf[4]) / 4;
-      if (RPM_init && (RPM > 400)) {
-        Serial.println();
-        Serial.println("engine-Start");
-        Serial.println();
-        Serial.println(CEL_init);
-        Serial.println();
-        timer_CEL_init = millis();
-        RPM_init=false;
-      }
-    }
-
-    if (rxId == 0xA8) { //Status Bremse
-      if (rxBuf[7] < 20) {
-        Fussbremse_getreten = false;
-      } else {
-        Fussbremse_getreten = true;
-      }
-
+        IGN = false;
+        CEL_init = true;
+        RPM_init = true;
+        state.reset();
     }
 
 
 
 
-    // Anzeige Führungsfahrzeug als 'E'
-    if (rxId == 0x193) {
 
-      if ((rxBuf[5] == 0x50) || (rxBuf[5] == 0x08)) {
-        ACC_on = false;
-      } else {
-        ACC_on = true;
-      }
+    klima_raw = (klima_raw * (iii - 1) + analogRead(KLIMA_TASTE_EIN_pin)) / iii;
+    if (iii > 100) {
+        iii = 1;
+    };
+    iii = iii + 1;
 
-
-      if (rxBuf[3] == 0x11) {
-        ACC_leading_veh = true;
-      } else {
-        ACC_leading_veh = false;
-      };
-    }
-
-
-    // Bremslichterleuchten bei ACC Bremsanforderung
-    if (rxId == 0xD5) {
-      if (rxBuf[5] == 0xF1) {
-        ACC_brake = true;
-      }
-      else {
-        ACC_brake = false;
-        ACC_brake_timer = millis();
-      };
-    }
-
-
-    // ###############  GANG ANZEIGE S M ' ' PRND und 123456  #################
-    if (rxId == 0x1D2) { //Gearbox 0xBA=186  //R=B4 C FF ;  N=D2 C FF; P=E1 C FF; D=78 7C FF; F0 F FF (zwischen zwei Gängen)
-      if (0) {
-        Serial.print(rxBuf[0], HEX);
-        Serial.print(" ");
-        Serial.print(rxBuf[1], HEX);
-        Serial.print(" ");
-        Serial.print(rxBuf[2], HEX);
-        Serial.print(" ");
-        Serial.print(rxBuf[3], HEX);
-        Serial.print(" ");
-        Serial.println(rxBuf[4], HEX);
-      }
-
-      gear_digit[0] = ' ';
-      if (rxBuf[0] == 0x78) { // D ist eingelegt
-        if (rxBuf[4] == 241) {    //S
-          gear_digit[0] = 'S';
-        };
-        if (rxBuf[4] == 242) { //M
-          gear_digit[0] = 'M';
-        };
-
-
-        gear_data = rxBuf[1]; // Gangzuordnung nach Tabelle unten
-        gear_digit[1] = ' ';
-        if (gear_data == 0x5C)gear_digit[1] = '1';
-        if (gear_data == 0x6C)gear_digit[1] = '2';
-        if (gear_data == 0x7C)gear_digit[1] = '3';
-        if (gear_data == 0x8C)gear_digit[1] = '4';
-        if (gear_data == 0x9C)gear_digit[1] = '5';
-        if (gear_data == 0xAC)gear_digit[1] = 'D';
-
-      } else if (rxBuf[0] == 0xE1) { //P
-        gear_digit[1] = 'P';
-      } else if (rxBuf[0] == 0xB4) { //R
-        gear_digit[1] = 'N';
-      } else if (rxBuf[0] == 0xD2) { //N
-        gear_digit[1] = 'R';
-      } else if (rxBuf[0] == 0xF0) { //Zwischen den Gängen
-        gear_digit[1] = ' ';
-      }
-
-
-
-
-      if (ACC_on) {                      // Hier ACC-an
-        gear_digit[1] = ' ';
-      }
-      if (ACC_leading_veh) {                      // Hier ACC-Fehler als E
-        gear_digit[0] = 'E';
-      }
-      if (GET) {
-        gear_digit[1] = 'X';
-      };
-    }
-
-
-    // ###############  Errorlights  #################
-    //0x592  DME ERRORLIGHTS =1426
-    //0x5A9  DSC ERRORLIGHT
-    //0x598  EGS
-    //0x59C  LDM
-    //neu
-    //0x5A1  ACC
-    //0x597 EKP
-    //0x5A0 RDC
-    //0x5E0 KOMBI
-
-    if ((rxId >= 0x580 ) && (rxId <= 0x671)) {
-
-
-      //0x40 sind Fehlermeldungen die im KMB gezeigt werden
-      if (rxBuf[0] == 0x40) {
-        //Error ist byte1 +erstes bit von byte2
-        const uint16_t Error_ID = rxBuf[1] + uint16_t(bitRead(rxBuf[2], 0) << 8);
-        //Fehler an oder aus steht in Byte3
-        const bool Error_on_off = (bitRead(rxBuf[3], 0));
-
-        if (Error_ID > 0 && Error_ID < 399) {
-          state.update(Error_ID, Error_on_off);
+    if (klima_raw > 50) {
+        if (accel_pos > 70) {
+            KLIMA_off = true;
+        } else {
+            KLIMA_off = false;
         }
+    } else {
+        KLIMA_off = true;
+    }
+    if (0) {
+        Serial.print(KLIMA_off);
+        Serial.print("  ");
+        Serial.print(klima_raw);
+        Serial.print(" ");
+        Serial.println(analogRead(KLIMA_TASTE_EIN_pin));
+        ;
+    }
+    if (!Fussbremse_getreten && ACC_brake && ((millis() - ACC_brake_timer) > 750)) {  //Wenn CAN message Bremse AN und diese länger als 750ms an ist, dann setzte Bremslichter ein
+        Brake_lights_on = true;
+    } else {
+        Brake_lights_on = false;
+    }
 
-        state.check_groups();
 
-        if (1) {
-          Serial.print(" Error Warning ID: ");
-          Serial.print(Error_ID, DEC);
-          Serial.print(" DEC, rxBuf[3] ");
-          Serial.print(rxBuf[3], HEX);
-          Serial.print(" HEX  bool: ");
-          Serial.print(Error_on_off);
-          Serial.println();
-        }
-        if (0) {
-          Serial.print("Errorlist: ");
-          for (size_t i=0; i<sizeof(state.state_array); ++i)
-          {
-            if (state.state_array[i])
-            {
-                Serial.print(i);
-                Serial.print(", ");
+    // RECEIVE DATA /////////////////////////////////////////////////////////////////////******************************
+    //read new can message
+    if (!digitalRead(CAN0_INT)) {                       // If CAN0_INT pin is low, read receive buffer
+
+        CAN0.readMsgBuf(&rxId, &len, rxBuf);      // Read data: len = data length, buf = data byte(s)
+
+
+        if (rxId == 0xAA) {
+            accel_pos = float((uint16_t(rxBuf[3]) << 8) + rxBuf[2]) / 655.35f;
+            RPM = (uint16_t(rxBuf[5] << 8) + rxBuf[4]) / 4;
+            if (RPM_init && (RPM > 400)) {
+                Serial.println();
+                Serial.println("engine-Start");
+                Serial.println();
+                Serial.println(CEL_init);
+                Serial.println();
+                timer_CEL_init = millis();
+                RPM_init=false;
             }
-          }
-          Serial.println();
+        }
+
+        if (rxId == 0xA8) { //Status Bremse
+            if (rxBuf[7] < 20) {
+                Fussbremse_getreten = false;
+            } else {
+                Fussbremse_getreten = true;
+            }
+
         }
 
 
-      }
-    } //ende der CAN Botschaften, die Errormessages enthalten.
-
-    // ################## CAN Nachrichten abfragen ENDE  ##################
 
 
+        // Anzeige Führungsfahrzeug als 'E'
+        if (rxId == 0x193) {
 
+            if ((rxBuf[5] == 0x50) || (rxBuf[5] == 0x08)) {
+                ACC_on = false;
+            } else {
+                ACC_on = true;
+            }
+
+
+            if (rxBuf[3] == 0x11) {
+                ACC_leading_veh = true;
+            } else {
+                ACC_leading_veh = false;
+            };
+        }
+
+
+        // Bremslichterleuchten bei ACC Bremsanforderung
+        if (rxId == 0xD5) {
+            if (rxBuf[5] == 0xF1) {
+                ACC_brake = true;
+            }
+            else {
+                ACC_brake = false;
+                ACC_brake_timer = millis();
+            };
+        }
+
+
+        // ###############  GANG ANZEIGE S M ' ' PRND und 123456  #################
+        if (rxId == 0x1D2) { //Gearbox 0xBA=186  //R=B4 C FF ;  N=D2 C FF; P=E1 C FF; D=78 7C FF; F0 F FF (zwischen zwei Gängen)
+            if (0) {
+                Serial.print(rxBuf[0], HEX);
+                Serial.print(" ");
+                Serial.print(rxBuf[1], HEX);
+                Serial.print(" ");
+                Serial.print(rxBuf[2], HEX);
+                Serial.print(" ");
+                Serial.print(rxBuf[3], HEX);
+                Serial.print(" ");
+                Serial.println(rxBuf[4], HEX);
+            }
+
+            gear_digit[0] = ' ';
+            if (rxBuf[0] == 0x78) { // D ist eingelegt
+                if (rxBuf[4] == 241) {    //S
+                    gear_digit[0] = 'S';
+                };
+                if (rxBuf[4] == 242) { //M
+                    gear_digit[0] = 'M';
+                };
+
+
+                gear_data = rxBuf[1]; // Gangzuordnung nach Tabelle unten
+                gear_digit[1] = ' ';
+                if (gear_data == 0x5C)gear_digit[1] = '1';
+                if (gear_data == 0x6C)gear_digit[1] = '2';
+                if (gear_data == 0x7C)gear_digit[1] = '3';
+                if (gear_data == 0x8C)gear_digit[1] = '4';
+                if (gear_data == 0x9C)gear_digit[1] = '5';
+                if (gear_data == 0xAC)gear_digit[1] = 'D';
+
+            } else if (rxBuf[0] == 0xE1) { //P
+                gear_digit[1] = 'P';
+            } else if (rxBuf[0] == 0xB4) { //R
+                gear_digit[1] = 'N';
+            } else if (rxBuf[0] == 0xD2) { //N
+                gear_digit[1] = 'R';
+            } else if (rxBuf[0] == 0xF0) { //Zwischen den Gängen
+                gear_digit[1] = ' ';
+            }
+
+
+
+
+            if (ACC_on) {                      // Hier ACC-an
+                gear_digit[1] = ' ';
+            }
+            if (ACC_leading_veh) {                      // Hier ACC-Fehler als E
+                gear_digit[0] = 'E';
+            }
+            if (GET) {
+                gear_digit[1] = 'X';
+            };
+        }
+
+
+        // ###############  Errorlights  #################
+        //0x592  DME ERRORLIGHTS =1426
+        //0x5A9  DSC ERRORLIGHT
+        //0x598  EGS
+        //0x59C  LDM
+        //neu
+        //0x5A1  ACC
+        //0x597 EKP
+        //0x5A0 RDC
+        //0x5E0 KOMBI
+
+        if ((rxId >= 0x580 ) && (rxId <= 0x671)) {
+
+
+            //0x40 sind Fehlermeldungen die im KMB gezeigt werden
+            if (rxBuf[0] == 0x40) {
+                //Error ist byte1 +erstes bit von byte2
+                const uint16_t Error_ID = rxBuf[1] + uint16_t(bitRead(rxBuf[2], 0) << 8);
+                //Fehler an oder aus steht in Byte3
+                const bool Error_on_off = (bitRead(rxBuf[3], 0));
+
+                if (Error_ID > 0 && Error_ID < 399) {
+                    state.update(Error_ID, Error_on_off);
+                }
+
+                state.check_groups();
+
+                if (1) {
+                    Serial.print(" Error Warning ID: ");
+                    Serial.print(Error_ID, DEC);
+                    Serial.print(" DEC, rxBuf[3] ");
+                    Serial.print(rxBuf[3], HEX);
+                    Serial.print(" HEX  bool: ");
+                    Serial.print(Error_on_off);
+                    Serial.println();
+                }
+                if (0) {
+                    Serial.print("Errorlist: ");
+                    for (size_t i=0; i<sizeof(state.state_array); ++i)
+                    {
+                        if (state.state_array[i])
+                        {
+                            Serial.print(i);
+                            Serial.print(", ");
+                        }
+                    }
+                    Serial.println();
+                }
+
+
+            }
+        } //ende der CAN Botschaften, die Errormessages enthalten.
+
+        // ################## CAN Nachrichten abfragen ENDE  ##################
+
+
+
+        if (0) {
+            //Serial.println(rxBuf[1], HEX);
+            Serial.print("--> Gang123456:");
+            Serial.print(gear_digit[0]);
+            Serial.println(gear_digit[1]);
+        }
+
+
+
+
+        if (0) {
+            sprintf(msgString, "0x%.3lX, %1d,  Data:", rxId, len);
+            Serial.print(msgString);
+            for (byte i = 0; i < len; i++) {
+                sprintf(msgString, " 0x%.2X", rxBuf[i]);
+                Serial.print(msgString);
+            }
+            Serial.println();
+        }
+    }
+
+    if (millis() - timer_serial1 > 110) {
+        Serial3.print(gear_digit[0]);
+        //Serial.print("Gear:");
+        //Serial.print(gear_digit[0]);
+
+        Serial3.println(gear_digit[1]);
+        //Serial3.println("P");
+        //Serial.println(gear_digit[1]);
+        timer_serial1 = millis();
+    }
+
+
+
+    // ################## CAN          ENDE  ##################
+
+
+
+
+    // ################# Hier sind wir noch in der LOOP aber nach dem CAN Input ##################
     if (0) {
-      //Serial.println(rxBuf[1], HEX);
-      Serial.print("--> Gang123456:");
-      Serial.print(gear_digit[0]);
-      Serial.println(gear_digit[1]);
+        Serial.print(IGN);
+        Serial.print(CEL);
+        Serial.print(EML);
+        Serial.print(BAT);
+        Serial.print(DSC);
+        Serial.print(OIL);
+        Serial.print(BRAKEWARN);
+        Serial.print(Brake_lights_on);
+        Serial.print(RPA);
+        Serial.print(GONG);
+        Serial.print(KLIMA_TASTE_EIN);
+        Serial.println(KLIMA_off);
     }
 
-
-
-
-    if (0) {
-      sprintf(msgString, "0x%.3lX, %1d,  Data:", rxId, len);
-      Serial.print(msgString);
-      for (byte i = 0; i < len; i++) {
-        sprintf(msgString, " 0x%.2X", rxBuf[i]);
-        Serial.print(msgString);
-      }
-      Serial.println();
-    }
-  }
-
-  if (millis() - timer_serial1 > 110) {
-    Serial3.print(gear_digit[0]);
-    //Serial.print("Gear:");
-    //Serial.print(gear_digit[0]);
-
-    Serial3.println(gear_digit[1]);
-    //Serial3.println("P");
-    //Serial.println(gear_digit[1]);
-    timer_serial1 = millis();
-  }
-
-
-
-  // ################## CAN          ENDE  ##################
-
-
-
-
-  // ################# Hier sind wir noch in der LOOP aber nach dem CAN Input ##################
-  if (0) {
-    Serial.print(IGN);
-    Serial.print(CEL);
-    Serial.print(EML);
-    Serial.print(BAT);
-    Serial.print(DSC);
-    Serial.print(OIL);
-    Serial.print(BRAKEWARN);
-    Serial.print(Brake_lights_on);
-    Serial.print(RPA);
-    Serial.print(GONG);
-    Serial.print(KLIMA_TASTE_EIN);
-    Serial.println(KLIMA_off);
-  }
-
-  if (_init_ && (millis() > init_time)) {
-    digitalWrite(CEL_pin, HIGH);
-    digitalWrite(EML_pin, HIGH);
-    digitalWrite(BAT_pin, HIGH);
-    digitalWrite(DSC_pin, HIGH);
-    digitalWrite(ABS_pin, HIGH);
-    digitalWrite(OIL_pin, HIGH);
-    digitalWrite(BRAKEWARN_pin, LOW); //Invertiert
-    digitalWrite(ACC_brake_pin, HIGH);
-    digitalWrite(GONG_pin, HIGH);
-    digitalWrite(KLIMA_off_pin, HIGH);
-    _init_ = false;
-  }
-
-  if (!_init_) {
-
-    if (EML || Brake_lights_on || RPA) {
-      digitalWrite(EML_pin, LOW);
-    } else {
-      digitalWrite(EML_pin, HIGH);
-    }
-
-    if (CEL) {
-      digitalWrite(CEL_pin, LOW);
-    } else {
-      digitalWrite(CEL_pin, HIGH);
-    }
-
-
-    if (BAT) {
-      digitalWrite(BAT_pin, LOW);
-    } else {
-      digitalWrite(BAT_pin, HIGH);
-    };
-
-    if (DSC) {
-      digitalWrite(DSC_pin, LOW);
-    } else {
-      digitalWrite(DSC_pin, HIGH);
-    };
-
-
-    if (ABS) {
-      digitalWrite(ABS_pin, LOW);
-    } else {
-      digitalWrite(ABS_pin, HIGH);
-    }
-
-
-    if (Brake_lights_on) {
-      digitalWrite(ACC_brake_pin, LOW);
-    } else {
-      digitalWrite(ACC_brake_pin, HIGH);
-    };
-
-    if (OIL) {
-      digitalWrite(OIL_pin, LOW);
-    } else {
-      digitalWrite(OIL_pin, HIGH);
-    };
-
-    if (BRAKEWARN) {
-      digitalWrite(BRAKEWARN_pin, HIGH);
-    } else {
-      digitalWrite(BRAKEWARN_pin, LOW);
-    };
-
-    if (GONG) {
-      if ((millis() - gongtimer) > (1000 * 15)) {
+    if (_init_ && (millis() > init_time)) {
+        digitalWrite(CEL_pin, HIGH);
+        digitalWrite(EML_pin, HIGH);
+        digitalWrite(BAT_pin, HIGH);
+        digitalWrite(DSC_pin, HIGH);
+        digitalWrite(ABS_pin, HIGH);
+        digitalWrite(OIL_pin, HIGH);
+        digitalWrite(BRAKEWARN_pin, LOW); //Invertiert
+        digitalWrite(ACC_brake_pin, HIGH);
         digitalWrite(GONG_pin, HIGH);
-      } else { //wenn GONG länger als 15s an, dann deaktivieren sonst gong auf low
-        digitalWrite(GONG_pin, LOW);
-      }
-    } else {
-      digitalWrite(GONG_pin, HIGH);
-      gongtimer = millis();
-    };
+        digitalWrite(KLIMA_off_pin, HIGH);
+        _init_ = false;
+    }
 
-    if (KLIMA_off) {
-      digitalWrite(KLIMA_off_pin, LOW);
-    } else {
-      digitalWrite(KLIMA_off_pin, HIGH);
-    };
-  }
+    if (!_init_) {
+
+        if (EML || Brake_lights_on || RPA) {
+            digitalWrite(EML_pin, LOW);
+        } else {
+            digitalWrite(EML_pin, HIGH);
+        }
+
+        if (CEL) {
+            digitalWrite(CEL_pin, LOW);
+        } else {
+            digitalWrite(CEL_pin, HIGH);
+        }
+
+
+        if (BAT) {
+            digitalWrite(BAT_pin, LOW);
+        } else {
+            digitalWrite(BAT_pin, HIGH);
+        };
+
+        if (DSC) {
+            digitalWrite(DSC_pin, LOW);
+        } else {
+            digitalWrite(DSC_pin, HIGH);
+        };
+
+
+        if (ABS) {
+            digitalWrite(ABS_pin, LOW);
+        } else {
+            digitalWrite(ABS_pin, HIGH);
+        }
+
+
+        if (Brake_lights_on) {
+            digitalWrite(ACC_brake_pin, LOW);
+        } else {
+            digitalWrite(ACC_brake_pin, HIGH);
+        };
+
+        if (OIL) {
+            digitalWrite(OIL_pin, LOW);
+        } else {
+            digitalWrite(OIL_pin, HIGH);
+        };
+
+        if (BRAKEWARN) {
+            digitalWrite(BRAKEWARN_pin, HIGH);
+        } else {
+            digitalWrite(BRAKEWARN_pin, LOW);
+        };
+
+        if (GONG) {
+            if ((millis() - gongtimer) > (1000 * 15)) {
+                digitalWrite(GONG_pin, HIGH);
+            } else { //wenn GONG länger als 15s an, dann deaktivieren sonst gong auf low
+                digitalWrite(GONG_pin, LOW);
+            }
+        } else {
+            digitalWrite(GONG_pin, HIGH);
+            gongtimer = millis();
+        };
+
+        if (KLIMA_off) {
+            digitalWrite(KLIMA_off_pin, LOW);
+        } else {
+            digitalWrite(KLIMA_off_pin, HIGH);
+        };
+    }
 
 }
 ;
