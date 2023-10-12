@@ -41,9 +41,7 @@ float accel_pos;
 float klima_raw = 0;
 unsigned int iii = 1;
 //Für Ganganzeige
-char gear_digit[2];
 unsigned long timer_serial1 = 0;
-unsigned int gear_data;
 bool IGN = false;
 bool _init_ = true;
 unsigned long ACC_brake_timer = 0;
@@ -267,20 +265,18 @@ void loop() {
 
         // ###############  GANG ANZEIGE S M ' ' PRND und 123456  #################
         if (rxId == 0x1D2) { //Gearbox 0xBA=186  //R=B4 C FF ;  N=D2 C FF; P=E1 C FF; D=78 7C FF; F0 F FF (zwischen zwei Gängen)
-            if (0) {
-                Serial.print(rxBuf[0], HEX);
-                Serial.print(" ");
-                Serial.print(rxBuf[1], HEX);
-                Serial.print(" ");
-                Serial.print(rxBuf[2], HEX);
-                Serial.print(" ");
-                Serial.print(rxBuf[3], HEX);
-                Serial.print(" ");
-                Serial.println(rxBuf[4], HEX);
-            }
-
+#if 0
+            Serial.print(rxBuf[0], HEX);
+            Serial.print(" ");
+            Serial.print(rxBuf[1], HEX);
+            Serial.print(" ");
+            Serial.print(rxBuf[2], HEX);
+            Serial.print(" ");
+            Serial.print(rxBuf[3], HEX);
+            Serial.print(" ");
+            Serial.println(rxBuf[4], HEX);
+#endif
             gears.update(rxBuf);
-
             gears.set_flags(ACC_on, ACC_leading_veh, GET);
         }
 
@@ -296,9 +292,7 @@ void loop() {
         //0x5A0 RDC
         //0x5E0 KOMBI
 
-        if ((rxId >= 0x580 ) && (rxId <= 0x671)) {
-
-
+        if ((0x580 <= rxId) && (rxId <= 0x671)) {
             //0x40 sind Fehlermeldungen die im KMB gezeigt werden
             if (rxBuf[0] == 0x40) {
                 //Error ist byte1 +erstes bit von byte2
@@ -333,8 +327,6 @@ void loop() {
                     }
                     Serial.println();
                 }
-
-
             }
         } //ende der CAN Botschaften, die Errormessages enthalten.
 
@@ -345,8 +337,8 @@ void loop() {
         if (0) {
             //Serial.println(rxBuf[1], HEX);
             Serial.print("--> Gang123456:");
-            Serial.print(gear_digit[0]);
-            Serial.println(gear_digit[1]);
+            Serial.print(gears.digits[0]);
+            Serial.println(gears.digits[1]);
         }
 
 
@@ -364,13 +356,13 @@ void loop() {
     }
 
     if (millis() - timer_serial1 > 110) {
-        Serial3.print(gear_digit[0]);
+        Serial3.print(gears.digits[0]);
         //Serial.print("Gear:");
-        //Serial.print(gear_digit[0]);
+        //Serial.print(gears.digits[0]);
 
-        Serial3.println(gear_digit[1]);
+        Serial3.println(gears.digits[1]);
         //Serial3.println("P");
-        //Serial.println(gear_digit[1]);
+        //Serial.println(gears.digits[1]);
         timer_serial1 = millis();
     }
 
