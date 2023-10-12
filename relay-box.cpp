@@ -32,6 +32,7 @@
 #include <SPI.h>
 
 #include <errorcodes.h>
+#include <gears.h>
 
 #define CAN0_INT 2                              // Set INT to pin 2
 MCP_CAN CAN0(10);                               // Set CS to pin 10
@@ -106,9 +107,6 @@ const int KLIMA_TASTE_EIN_pin = A7; //A7
 
 
 
-unsigned long rxId;
-unsigned char len = 0;
-byte rxBuf[8];
 char msgString[128];                        // Array to store serial string
 
 void setup()
@@ -198,9 +196,16 @@ void loop() {
 
 
     // RECEIVE DATA /////////////////////////////////////////////////////////////////////******************************
+    gear_display gears;
+
     //read new can message
     if (!digitalRead(CAN0_INT)) {                       // If CAN0_INT pin is low, read receive buffer
 
+        unsigned long rxId;
+        unsigned char len = 0;
+        byte rxBuf[8];
+
+        //TODO does it really only read max 8 bytes?
         CAN0.readMsgBuf(&rxId, &len, rxBuf);      // Read data: len = data length, buf = data byte(s)
 
 
@@ -274,47 +279,9 @@ void loop() {
                 Serial.println(rxBuf[4], HEX);
             }
 
-            gear_digit[0] = ' ';
-            if (rxBuf[0] == 0x78) { // D ist eingelegt
-                if (rxBuf[4] == 241) {    //S
-                    gear_digit[0] = 'S';
-                };
-                if (rxBuf[4] == 242) { //M
-                    gear_digit[0] = 'M';
-                };
+            gears.update(rxBuf);
 
-
-                gear_data = rxBuf[1]; // Gangzuordnung nach Tabelle unten
-                gear_digit[1] = ' ';
-                if (gear_data == 0x5C)gear_digit[1] = '1';
-                if (gear_data == 0x6C)gear_digit[1] = '2';
-                if (gear_data == 0x7C)gear_digit[1] = '3';
-                if (gear_data == 0x8C)gear_digit[1] = '4';
-                if (gear_data == 0x9C)gear_digit[1] = '5';
-                if (gear_data == 0xAC)gear_digit[1] = 'D';
-
-            } else if (rxBuf[0] == 0xE1) { //P
-                gear_digit[1] = 'P';
-            } else if (rxBuf[0] == 0xB4) { //R
-                gear_digit[1] = 'N';
-            } else if (rxBuf[0] == 0xD2) { //N
-                gear_digit[1] = 'R';
-            } else if (rxBuf[0] == 0xF0) { //Zwischen den Gängen
-                gear_digit[1] = ' ';
-            }
-
-
-
-
-            if (ACC_on) {                      // Hier ACC-an
-                gear_digit[1] = ' ';
-            }
-            if (ACC_leading_veh) {                      // Hier ACC-Fehler als E
-                gear_digit[0] = 'E';
-            }
-            if (GET) {
-                gear_digit[1] = 'X';
-            };
+            gears.set_flags(ACC_on, ACC_leading_veh, GET);
         }
 
 
