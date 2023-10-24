@@ -31,6 +31,7 @@
 #include <mcp_can.h>
 #include <SPI.h>
 
+#include <can_id.h>
 #include <errorcodes.h>
 #include <gears.h>
 
@@ -207,7 +208,7 @@ void loop() {
         CAN0.readMsgBuf(&rxId, &len, rxBuf);      // Read data: len = data length, buf = data byte(s)
 
 
-        if (rxId == 0xAA) {
+        if (rxId == can_id::engine_start) {
             accel_pos = float((uint16_t(rxBuf[3]) << 8) + rxBuf[2]) / 655.35f;
             RPM = (uint16_t(rxBuf[5] << 8) + rxBuf[4]) / 4;
             if (RPM_init && (RPM > 400)) {
@@ -221,7 +222,7 @@ void loop() {
             }
         }
 
-        if (rxId == 0xA8) { //Status Bremse
+        if (rxId == can_id::brake_state) { //Status Bremse
             if (rxBuf[7] < 20) {
                 Fussbremse_getreten = false;
             } else {
@@ -234,7 +235,7 @@ void loop() {
 
 
         // Anzeige Führungsfahrzeug als 'E'
-        if (rxId == 0x193) {
+        if (rxId == can_id::fuehrungsfahrzeug_E) {
 
             if ((rxBuf[5] == 0x50) || (rxBuf[5] == 0x08)) {
                 ACC_on = false;
@@ -252,7 +253,7 @@ void loop() {
 
 
         // Bremslichterleuchten bei ACC Bremsanforderung
-        if (rxId == 0xD5) {
+        if (rxId == can_id::brakelight_acc_req) {
             if (rxBuf[5] == 0xF1) {
                 ACC_brake = true;
             }
@@ -264,7 +265,7 @@ void loop() {
 
 
         // ###############  GANG ANZEIGE S M ' ' PRND und 123456  #################
-        if (rxId == 0x1D2) { //Gearbox 0xBA=186  //R=B4 C FF ;  N=D2 C FF; P=E1 C FF; D=78 7C FF; F0 F FF (zwischen zwei Gängen)
+        if (rxId == can_id::display_gears) { //Gearbox 0xBA=186  //R=B4 C FF ;  N=D2 C FF; P=E1 C FF; D=78 7C FF; F0 F FF (zwischen zwei Gängen)
 #if 0
             Serial.print(rxBuf[0], HEX);
             Serial.print(" ");
@@ -292,7 +293,7 @@ void loop() {
         //0x5A0 RDC
         //0x5E0 KOMBI
 
-        if ((0x580 <= rxId) && (rxId <= 0x671)) {
+        if ((can_id::error_min <= rxId) && (rxId <= can_id::error_max)) {
             //0x40 sind Fehlermeldungen die im KMB gezeigt werden
             if (rxBuf[0] == 0x40) {
                 //Error ist byte1 +erstes bit von byte2
