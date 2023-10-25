@@ -246,7 +246,7 @@ void loop() {
                     errors.update(Error_ID, Error_on_off);
                 }
 
-                errors.check_groups();
+                errors.check_states(car);
 
 #if 1
                 Serial.print(" Error Warning ID: ");

@@ -2,6 +2,52 @@
 
 #include <stubs.h>
 
+struct init_state
+{
+    bool pins = false;
+    bool RPM  = true;
+    bool CEL  = false;
+};
+
+struct timer_state
+{
+    unsigned long serial1 = 0;
+    unsigned long ACC_brake = 0;
+    unsigned long init_time = 500; //initialisierungszeit 10ms brauche ich nicht mehr, kann irgendwann rausgenommen werden, dann bei initialisierung alles auf HIGH setzen.
+    unsigned long CEL_init = 0;
+    unsigned long gong = 0;
+};
+
+struct car_state
+{
+    float accel_pos = 0;
+    float klima_raw = 0;
+    unsigned int iii = 1;
+    //Für Ganganzeige
+    bool IGN = false;
+    bool Brake_lights_on = false;
+    bool Fussbremse_getreten = false;
+    //Motorparams
+    bool EML = false;     // Angeschlossen
+    bool CEL = false;     // Angeschlossen
+    unsigned int RPM = 0;
+    bool BAT = false;     // angeschlossen
+    bool DSC = false;     // angeschlossen
+    bool ABS = false;     // angeschlossen
+    bool RPA = false;     // RPA
+    bool OIL = false;
+    bool BRAKEWARN = false;
+    bool GONG = false;
+    bool ACC_on = false;
+    bool ACC_leading_veh = false;
+    //ACC wird als E angezeigt im Gangmenu
+    bool GET = false;
+    //GET wird als " X" gesendet
+    bool ACC_brake = false;
+    bool KLIMA_off = false;
+    bool KLIMA_TASTE_EIN = false;
+};
+
 //enum ERROR_GROUP {
 //    UNDEFINED = 0,
 //    ABS,
@@ -158,10 +204,10 @@ static const int DSC_list[] = {24, 35, 36 , 184, 215, 237, 353, 334, 354, 283};
 //static const int VORG_list[] = {25};
 static const int BAT_list[] = {213, 220, 229, 247, 304, 305, 306};
 
+
 struct error_state
 {
     bool state_array[400] = {0};
-    bool CEL, EML, OIL, GET, RPA, BRAKEWARN, ABS, DSC, BAT;
 
     void reset()
     {
@@ -176,109 +222,63 @@ struct error_state
         }
     }
     
-    void check_groups()
+    void check_states(car_state& car)
     {
-        CEL = false;
-        EML = false;
-        OIL = false;
-        GET = false;
-        RPA = false;
-        BRAKEWARN = false;
-        ABS = false;
-        DSC = false;
-        BAT = false;
+        car.CEL = false;
+        car.EML = false;
+        car.OIL = false;
+        car.GET = false;
+        car.RPA = false;
+        car.BRAKEWARN = false;
+        car.ABS = false;
+        car.DSC = false;
+        car.BAT = false;
         for (size_t i=0; i<sizeof(CEL_list); ++i)
         {
             if (state_array[CEL_list[i]])
-                CEL = true;
+                car.CEL = true;
         }
         for (size_t i=0; i<sizeof(EML_list); ++i)
         {
             if (state_array[EML_list[i]])
-                EML = true;
+                car.EML = true;
         }
         for (size_t i=0; i<sizeof(OIL_list); ++i)
         {
             if (state_array[OIL_list[i]])
-                OIL = true;
+                car.OIL = true;
         }
         for (size_t i=0; i<sizeof(GET_list); ++i)
         {
             if (state_array[GET_list[i]])
-                GET = true;
+                car.GET = true;
         }
         for (size_t i=0; i<sizeof(RPA_list); ++i)
         {
             if (state_array[RPA_list[i]])
-                RPA = true;
+                car.RPA = true;
         }
         for (size_t i=0; i<sizeof(BRAKEWARN_list); ++i)
         {
             if (state_array[BRAKEWARN_list[i]])
-                BRAKEWARN = true;
+                car.BRAKEWARN = true;
         }
         for (size_t i=0; i<sizeof(ABS_list); ++i)
         {
             if (state_array[ABS_list[i]])
-                ABS = true;
+                car.ABS = true;
         }
         for (size_t i=0; i<sizeof(DSC_list); ++i)
         {
             if (state_array[DSC_list[i]])
-                DSC = true;
+                car.DSC = true;
         }
         for (size_t i=0; i<sizeof(BAT_list); ++i)
         {
             if (state_array[BAT_list[i]])
-                BAT = true;
+                car.BAT = true;
         }
     }
-};
-
-struct init_state
-{
-    bool pins = false;
-    bool RPM  = true;
-    bool CEL  = false;
-};
-
-struct timer_state
-{
-    unsigned long serial1 = 0;
-    unsigned long ACC_brake = 0;
-    unsigned long init_time = 500; //initialisierungszeit 10ms brauche ich nicht mehr, kann irgendwann rausgenommen werden, dann bei initialisierung alles auf HIGH setzen.
-    unsigned long CEL_init = 0;
-    unsigned long gong = 0;
-};
-
-struct car_state
-{
-    float accel_pos = 0;
-    float klima_raw = 0;
-    unsigned int iii = 1;
-    //Für Ganganzeige
-    bool IGN = false;
-    bool Brake_lights_on = false;
-    bool Fussbremse_getreten = false;
-    //Motorparams
-    bool EML = false;     // Angeschlossen
-    bool CEL = false;     // Angeschlossen
-    unsigned int RPM = 0;
-    bool BAT = false;     // angeschlossen
-    bool DSC = false;     // angeschlossen
-    bool ABS = false;     // angeschlossen
-    bool RPA = false;     // RPA
-    bool OIL = false;
-    bool BRAKEWARN = false;
-    bool GONG = false;
-    bool ACC_on = false;
-    bool ACC_leading_veh = false;
-    //ACC wird als E angezeigt im Gangmenu
-    bool GET = false;
-    //GET wird als " X" gesendet
-    bool ACC_brake = false;
-    bool KLIMA_off = false;
-    bool KLIMA_TASTE_EIN = false;
 };
 
 struct digital_pins
