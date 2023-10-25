@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stubs.h>
+
 //enum ERROR_GROUP {
 //    UNDEFINED = 0,
 //    ABS,
@@ -233,5 +235,66 @@ struct error_state
     }
 };
 
+struct init_state
+{
+    bool pins = false;
+    bool RPM  = true;
+    bool CEL  = false;
+};
+
+struct timer_state
+{
+    unsigned long serial1 = 0;
+    unsigned long ACC_brake = 0;
+    unsigned long init_time = 500; //initialisierungszeit 10ms brauche ich nicht mehr, kann irgendwann rausgenommen werden, dann bei initialisierung alles auf HIGH setzen.
+    unsigned long CEL_init = 0;
+    unsigned long gong = 0;
+};
+
+struct car_state
+{
+    float accel_pos = 0;
+    float klima_raw = 0;
+    unsigned int iii = 1;
+    //Für Ganganzeige
+    bool IGN = false;
+    bool Brake_lights_on = false;
+    bool Fussbremse_getreten = false;
+    //Motorparams
+    bool EML = false;     // Angeschlossen
+    bool CEL = false;     // Angeschlossen
+    unsigned int RPM = 0;
+    bool BAT = false;     // angeschlossen
+    bool DSC = false;     // angeschlossen
+    bool ABS = false;     // angeschlossen
+    bool RPA = false;     // RPA
+    bool OIL = false;
+    bool BRAKEWARN = false;
+    bool GONG = false;
+    bool ACC_on = false;
+    bool ACC_leading_veh = false;
+    //ACC wird als E angezeigt im Gangmenu
+    bool GET = false;
+    //GET wird als " X" gesendet
+    bool ACC_brake = false;
+    bool KLIMA_off = false;
+    bool KLIMA_TASTE_EIN = false;
+};
+
+struct digital_pins
+{
+    const int IGN           = A5 ;  //S_Line muss an pin D3 Digital 3, und IGN an Pin 19 (Analog5) kommt IGN
+    const int EML           = 7;    // Pin 7
+    const int CEL           = A4;   //ehemals M_Line //Pin A4
+    const int BAT           = 6;
+    const int DSC           = 5;
+    const int ABS           = 4;
+    const int OIL           = 8;    //Ölsensor //ehemals GET_pin //am stecker L1 pin 6
+    const int BRAKEWARN     = 9;    //ACC wird als E angezeigt im Gangmenu BRAKEWARN ist nun Anschnaller
+    const int GONG          = A1;   //ACC wird als E angezeigt im Gangmenu BRAKEWARN ist nun Anschnaller
+    const int ACC_brake     = 3;    //ehemals S_Line
+    const int KLIMA_off     = A0;   //A0
+    const int KLIMA_TASTE_EIN = A7; //A7
+};
 
 

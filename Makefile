@@ -34,7 +34,7 @@ IbusTrx.o: IbusTrx.h IbusTrx.cpp IbusNames.h types.h
 #relay-box: relay-box.o
 #	$(CXX) $(CXXFLAGS) $(LDFLAGS) $(MOREFLAGS) $^ -o $@
 
-relay-box.o: relay-box.cpp
+relay-box.o: relay-box.cpp can_id.h gears.h states.h
 	$(CXX) $(CXXFLAGS) $(MOREFLAGS) $(INCLUDES) -c relay-box.cpp -o $@
 
 .PHONY: clean
