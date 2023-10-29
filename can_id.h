@@ -1,4 +1,6 @@
 #pragma once
+#ifndef CAN_ID_H
+#define CAN_ID_H
 
 enum can_id
 {
@@ -10,3 +12,5 @@ enum can_id
     error_min           = 0x580, // Start of errors range
     error_max           = 0x671  // End of errors range
 };
+
+#endif // CAN_ID_H

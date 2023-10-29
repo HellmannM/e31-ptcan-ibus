@@ -1,4 +1,6 @@
 #pragma once
+#ifndef GEARS_H
+#define GEARS_H
 
 // gear_0:
 // ' ':
@@ -86,3 +88,5 @@ struct gear_display
         return true;
     }
 };
+
+#endif // GEARS_H

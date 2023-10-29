@@ -1,4 +1,6 @@
 #pragma once
+#ifndef STATES_H
+#define STATES_H
 
 #include <stubs.h>
 
@@ -297,4 +299,4 @@ struct digital_pins
     const int KLIMA_TASTE_EIN = A7; //A7
 };
 
-
+#endif // STATES_H
