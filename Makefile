@@ -1,5 +1,5 @@
 CXX := g++
-CXXFLAGS := -std=c++17 -O2
+CXXFLAGS := -std=c++11 -O2
 #LDFLAGS := -ltbb
 MOREFLAGS := -fdiagnostics-color=always
 INCLUDES := -I. -I./stubs

@@ -218,7 +218,7 @@ struct error_state
 
     void update(size_t id, bool value)
     {
-        if (id < sizeof(state_array))
+        if (id < sizeof(state_array) / sizeof(*state_array))
         {
             state_array[id] = value;
         }
@@ -235,47 +235,47 @@ struct error_state
         car.ABS = false;
         car.DSC = false;
         car.BAT = false;
-        for (size_t i=0; i<sizeof(CEL_list); ++i)
+        for (size_t i=0; i<sizeof(CEL_list) / sizeof(*CEL_list); ++i)
         {
             if (state_array[CEL_list[i]])
                 car.CEL = true;
         }
-        for (size_t i=0; i<sizeof(EML_list); ++i)
+        for (size_t i=0; i<sizeof(EML_list) / sizeof(*EML_list); ++i)
         {
             if (state_array[EML_list[i]])
                 car.EML = true;
         }
-        for (size_t i=0; i<sizeof(OIL_list); ++i)
+        for (size_t i=0; i<sizeof(OIL_list) / sizeof(*OIL_list); ++i)
         {
             if (state_array[OIL_list[i]])
                 car.OIL = true;
         }
-        for (size_t i=0; i<sizeof(GET_list); ++i)
+        for (size_t i=0; i<sizeof(GET_list) / sizeof(*GET_list); ++i)
         {
             if (state_array[GET_list[i]])
                 car.GET = true;
         }
-        for (size_t i=0; i<sizeof(RPA_list); ++i)
+        for (size_t i=0; i<sizeof(RPA_list) / sizeof(*RPA_list); ++i)
         {
             if (state_array[RPA_list[i]])
                 car.RPA = true;
         }
-        for (size_t i=0; i<sizeof(BRAKEWARN_list); ++i)
+        for (size_t i=0; i<sizeof(BRAKEWARN_list) / sizeof(*BRAKEWARN_list); ++i)
         {
             if (state_array[BRAKEWARN_list[i]])
                 car.BRAKEWARN = true;
         }
-        for (size_t i=0; i<sizeof(ABS_list); ++i)
+        for (size_t i=0; i<sizeof(ABS_list) / sizeof(*ABS_list); ++i)
         {
             if (state_array[ABS_list[i]])
                 car.ABS = true;
         }
-        for (size_t i=0; i<sizeof(DSC_list); ++i)
+        for (size_t i=0; i<sizeof(DSC_list) / sizeof(*DSC_list); ++i)
         {
             if (state_array[DSC_list[i]])
                 car.DSC = true;
         }
-        for (size_t i=0; i<sizeof(BAT_list); ++i)
+        for (size_t i=0; i<sizeof(BAT_list) / sizeof(*BAT_list); ++i)
         {
             if (state_array[BAT_list[i]])
                 car.BAT = true;
